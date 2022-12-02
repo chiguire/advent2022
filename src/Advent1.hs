@@ -14,7 +14,7 @@ advent1_1 = maximum $ map (\x -> sum x) $ elf_calories input
 advent1_2 = sum $ take 3 $ reverse $ sort $ map (\x -> sum x) $ elf_calories input
 
 elf_calories :: String -> [[Int]]
-elf_calories ipt = map (\x -> map (\y -> read y :: Int) x) $ map dropEmpty $ splitOn [""] $ splitOn "\n" ipt
+elf_calories ipt = map (\x -> map (\y -> read y :: Int) x) $ splitOn [""] $ splitOn "\n" ipt
 
 -- Input
 
