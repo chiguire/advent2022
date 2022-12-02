@@ -9,41 +9,93 @@ import Data.List.Split
 
 -- Answers
 
-advent2_1 = sum $ map (roundScore . score . outcome) $ parseInput input
+advent2_1 = sum $ map getPlayerBFullScore $ parseInput1 input
 
-advent2_2 = 0
+advent2_2 = sum $ map getPlayerBFullScore $ parseInput2 input
 
-parseInput :: String -> [(Player, Player)]
-parseInput ipt = map readIntoMatch $ map words $ splitOn "\n" ipt
+parseInput1 :: String -> [Match]
+parseInput1 ipt = map readFromChoices $ map words $ splitOn "\n" ipt
 
-readIntoMatch :: [String] -> (Player, Player)
-readIntoMatch [x, y] = (readIntoMatchA x, readIntoMatchB y)
-    where
-        readIntoMatchA "A" = Rock
-        readIntoMatchA "B" = Paper
-        readIntoMatchA "C" = Scissor
-        readIntoMatchB "X" = Rock
-        readIntoMatchB "Y" = Paper
-        readIntoMatchB "Z" = Scissor
+parseInput2 :: String -> [Match]
+parseInput2 ipt = map readFromOutcome $ map words $ splitOn "\n" ipt
 
-roundScore :: (Int, Int, Int) -> Int
-roundScore (x, y, z) = y + z
+readFromChoices :: [String] -> Match
+readFromChoices [x, y] = Match { 
+    getPlayerAChoice = playerA,
+    getPlayerBChoice = playerB,
+    getPlayerAScore = fst $ resultScore matchOutcome,
+    getPlayerBScore = snd $ resultScore matchOutcome,
+    getPlayerBFullScore = playerBFullScore matchOutcome playerB,
+    getOutcome = matchOutcome
+} where
+    playerA = readIntoPlayer x
+    playerB = readIntoPlayer y
+    matchOutcome = outcome playerA playerB
 
-score :: (Result, Player) -> (Int, Int, Int)
-score (PlayerAWins, p) = (6, 0, score' p)
-score (PlayerBWins, p) = (0, 6, score' p)
-score (Draw, p) = (3, 3, score' p)
-    
-score' Rock = 1
-score' Paper = 2
-score' Scissor = 3
+readFromOutcome :: [String] -> Match
+readFromOutcome [x,y] = Match { 
+    getPlayerAChoice = playerA,
+    getPlayerBChoice = playerB,
+    getPlayerAScore = fst $ resultScore matchOutcome,
+    getPlayerBScore = snd $ resultScore matchOutcome,
+    getPlayerBFullScore = playerBFullScore matchOutcome playerB,
+    getOutcome = matchOutcome
+} where
+    playerA = readIntoPlayer x
+    matchOutcome = readIntoResult y
+    playerB = choiceFromOutcome matchOutcome playerA
 
-outcome :: (Player, Player) -> (Result, Player)
-outcome (x, y)
-    | a == EQ = (Draw, y)
-    | a == LT = (PlayerBWins, y)
-    | a == GT = (PlayerAWins, y)
+readIntoPlayer :: String -> Player
+readIntoPlayer "A" = Rock
+readIntoPlayer "B" = Paper
+readIntoPlayer "C" = Scissor
+readIntoPlayer "X" = Rock
+readIntoPlayer "Y" = Paper
+readIntoPlayer "Z" = Scissor
+
+readIntoResult :: String -> Result
+readIntoResult "X" = PlayerAWins
+readIntoResult "Y" = Draw
+readIntoResult "Z" = PlayerBWins
+
+playerBFullScore :: Result -> Player -> Int
+playerBFullScore r p = b + choiceScore p
+    where (_, b) = resultScore r
+
+resultScore :: Result -> (Int, Int)
+resultScore PlayerAWins = (6, 0)
+resultScore PlayerBWins = (0, 6)
+resultScore Draw = (3, 3)
+
+choiceScore Rock = 1
+choiceScore Paper = 2
+choiceScore Scissor = 3
+
+outcome :: Player -> Player -> Result
+outcome x y
+    | a == EQ = Draw
+    | a == LT = PlayerBWins
+    | a == GT = PlayerAWins
     where a = compare x y
+
+choiceFromOutcome :: Result -> Player -> Player
+choiceFromOutcome PlayerAWins Paper = Rock
+choiceFromOutcome PlayerAWins Rock = Scissor
+choiceFromOutcome PlayerAWins Scissor = Paper
+choiceFromOutcome PlayerBWins Paper = Scissor
+choiceFromOutcome PlayerBWins Rock = Paper
+choiceFromOutcome PlayerBWins Scissor = Rock
+choiceFromOutcome Draw a = a
+
+data Match = Match
+    {
+        getPlayerAChoice :: Player,
+        getPlayerBChoice :: Player,
+        getPlayerAScore :: Int,
+        getPlayerBScore :: Int,
+        getPlayerBFullScore :: Int,
+        getOutcome :: Result
+    }
 
 data Result = PlayerAWins | PlayerBWins | Draw deriving Show
 data Player = Rock | Paper | Scissor deriving Eq
