@@ -13,9 +13,30 @@ import Data.List.Split
 
 advent3_1 = sum $ Data.List.map (priority . getShared) $ parseInput input
 
-advent3_2 = 0
+advent3_2 = sum $ Data.List.map (priority . getElfShared) $ parseInput2 input
 
 -- Functions
+
+parseInput2 :: String -> [ElfGroup]
+parseInput2 ipt = Data.List.map makeElfGroup $ chunksOf 3 $ words ipt
+
+makeElfGroup [a, b, c] = ElfGroup {
+    getElfA = x,
+    getElfB = y,
+    getElfC = z,
+    getElfShared = shared
+} where
+    x = fromList a
+    y = fromList b
+    z = fromList c
+    shared = head $ elems $ intersection x $ intersection y z
+
+data ElfGroup = ElfGroup {
+    getElfA :: Set Char,
+    getElfB :: Set Char,
+    getElfC :: Set Char,
+    getElfShared :: Char
+} deriving Show
 
 parseInput :: String -> [Rucksack]
 parseInput ipt = Data.List.map makeRucksack $ words ipt
