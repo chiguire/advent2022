@@ -1,24 +1,94 @@
 {-# LANGUAGE TemplateHaskell, QuasiQuotes #-}
 module Advent5
-    ( advent5_1, advent5_2
+    ( advent5_1, advent5_2, moveCrate
     ) where
 
 import Text.Heredoc
 import Data.List
+import Data.List.Split (splitOn, chunksOf)
 
 -- Answers
 
-advent5_1 = 0
+advent5_1 = getTops $ moveCrates instructions state where
+    (state, instructions) = parseInput input
 
-advent5_2 = 0
+advent5_2 = getTops $ moveCrates9001 instructions state where
+    (state, instructions) = parseInput input
 
-parseState ipt = 0
+getTops :: [[Char]] -> String
+getTops state = map head state
 
--- moveCrates :: CrateState -> Int -> Int -> Int -> CrateState
--- moveCrates (CrateState l) n start finish = CrateState l'
---    where l' = 
+-- parsing
 
-newtype CrateState = CrateState [[Char]]
+parseInput :: String -> ([[Char]], [Instruction])
+parseInput ipt = (parseOriginalState originalState, parseInstructions instructions) where
+    [originalState, instructions] = splitOn [""] $ splitOn "\n" ipt
+
+parseOriginalState :: [String] -> [[Char]]
+parseOriginalState ipt = crateLines where
+    crateLines = map (reverse.unwords.words) $ filter (not.null.unwords.words) $ transpose $ map (parseCrateLine) $ tail reversedInput
+    emptyStacks = take getNStacks $ repeat []
+    getNStacks = read (head $ reverse $ words $ head reversedInput) :: Int
+    reversedInput = reverse ipt
+
+parseCrateLine :: String -> [Char]
+parseCrateLine l = map parseCrate $ chunksOf 4 l
+
+parseCrate :: String -> Char
+parseCrate (' ':_) = ' '
+parseCrate ('[':c:_) = c
+
+parseInstructions :: [String] -> [Instruction]
+parseInstructions ipt = map (\x -> parseInstructions' $ words x) ipt where
+    parseInstructions' ["move", m, "from", f, "to", t] = Instruction { getNBlocks = read m::Int, getFrom = read f::Int, getTo = read t::Int }
+
+-- advent5_2
+moveCrates9001 :: [Instruction] -> [[Char]] -> [[Char]]
+moveCrates9001 instructions state = foldl moveInstruction9001 state instructions
+
+moveInstruction9001 :: [[Char]] -> Instruction -> [[Char]]
+moveInstruction9001 state i = pushWithBuffer buffer popped where
+    pushWithBuffer [] s = s
+    pushWithBuffer (c:buffer) s = pushWithBuffer buffer $ pushCrate to c s
+    (popped, buffer) = popWithBuffer state
+    popWithBuffer s = foldl (\(s', buffer) i -> (fst $ popCrate s' from, ((snd $ popCrate s' from):buffer))) (state, []) $ take n $ repeat i
+    n = getNBlocks i
+    from = getFrom i
+    to = getTo i
+
+-- advent5_1
+
+moveCrates :: [Instruction] -> [[Char]] -> [[Char]]
+moveCrates instructions state = foldl moveInstruction state instructions
+
+moveInstruction :: [[Char]] -> Instruction ->  [[Char]]
+moveInstruction state instruction = foldl (\s _ -> moveCrate (getFrom instruction) (getTo instruction) s) state $ take (getNBlocks instruction) $ repeat instruction
+
+moveCrate :: Int -> Int -> [[Char]] -> [[Char]]
+moveCrate from to l = pushCrate to c popped
+    where
+        (popped, c) = popCrate l from
+
+popCrate :: [[Char]] -> Int -> ([[Char]], Char)
+popCrate l from = popCrate' [] l from 1 ' ' where 
+    popCrate' :: [[Char]] -> [[Char]] -> Int -> Int -> Char -> ([[Char]], Char)
+    popCrate' l [] _ _ c = (reverse l, c)
+    popCrate' l (x:xs) from idx c
+        | from == idx = popCrate' ((tail x):l) xs from (from+1) (head x)
+        | otherwise   = popCrate' (x:l) xs from (idx+1) c
+
+pushCrate :: Int -> Char -> [[Char]] -> [[Char]]
+pushCrate to c l = pushCrate' [] l to 1 c where
+    pushCrate' l [] _ _ _ = reverse l
+    pushCrate' l (x:xs) to idx c
+        | to == idx = pushCrate' ((c:x):l) xs to (to+1) c
+        | otherwise = pushCrate' (x:l) xs to (idx+1) c
+
+data Instruction = Instruction {
+    getNBlocks :: Int,
+    getFrom :: Int,
+    getTo :: Int
+} deriving Show
 
 -- Input
 
