@@ -1,6 +1,6 @@
 {-# LANGUAGE TemplateHaskell, QuasiQuotes #-}
 module Advent5
-    ( advent5_1, advent5_2, moveCrate
+    ( advent5_1, advent5_2
     ) where
 
 import Text.Heredoc
@@ -22,13 +22,11 @@ getTops state = map head state
 
 parseInput :: String -> ([[Char]], [Instruction])
 parseInput ipt = (parseOriginalState originalState, parseInstructions instructions) where
-    [originalState, instructions] = splitOn [""] $ splitOn "\n" ipt
+    [originalState, instructions] = splitOn [""] $ lines ipt
 
 parseOriginalState :: [String] -> [[Char]]
 parseOriginalState ipt = crateLines where
     crateLines = map (reverse.unwords.words) $ filter (not.null.unwords.words) $ transpose $ map (parseCrateLine) $ tail reversedInput
-    emptyStacks = take getNStacks $ repeat []
-    getNStacks = read (head $ reverse $ words $ head reversedInput) :: Int
     reversedInput = reverse ipt
 
 parseCrateLine :: String -> [Char]
