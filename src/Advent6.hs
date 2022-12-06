@@ -6,29 +6,21 @@ import Data.List (nub)
 
 -- Answers
 
-advent6_1 = startOfPacket input 4
+advent6_1 = startOfMessage input 4
 
 advent6_2 = startOfMessage input 14
 
--- advent6_1
-
-startOfPacket :: String -> Int -> Maybe Int
-startOfPacket (a:b:c:d:rest) idx
-    | isStartOfPacket [a,b,c,d] = Just idx
-    | null rest = Nothing
-    | otherwise = startOfPacket (b:c:d:rest) (idx+1)
-
-isStartOfPacket :: [Char] -> Bool
-isStartOfPacket l = l == nub l
-
--- advent6_2
+-- advent6_1, advent6_2
 
 startOfMessage :: String -> Int -> Maybe Int
 startOfMessage ipt messageLength = startOfMessage' ipt messageLength messageLength where
     startOfMessage' ipt messageLength idx
-        | isStartOfPacket $ take messageLength ipt = Just idx
+        | isStartOfMessage $ take messageLength ipt = Just idx
         | null $ drop messageLength ipt = Nothing
         | otherwise = startOfMessage' (drop 1 ipt) messageLength (idx+1)
+
+isStartOfMessage :: [Char] -> Bool
+isStartOfMessage l = l == nub l
 
 -- Input
 
