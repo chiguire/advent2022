@@ -3,34 +3,122 @@ module Advent7
     ( advent7_1, advent7_2
     ) where
 
+import Data.List (any, sortOn)
 import Text.Heredoc
 import Text.Parsec
 import Text.Parsec.Char
 import Text.Parsec.String
-import Text.Parse.Combinator (many1)
+import Text.Parsec.Combinator (many1)
 
 -- Answers
 
-advent7_1 = 0
+advent7_1 = (sum . filter ((>) 100000) . map getSize . filter isDirectory . flatten . buildTree) <$> parse parseInput "advent7" input
 
-advent7_2 = 0
+advent7_2 = do
+    parsedData <- parse parseInput "advent7" input
+    let topDir = buildTree parsedData
+    let dirList = filter isDirectory $ flatten topDir
+    let freeSpace = 70000000 - (getSize topDir)
+    let minFreeSpace = 30000000
+    let candidateDirs = sortOn getSize $ filter (\d -> freeSpace + (getSize d) > minFreeSpace) dirList
+    return $ head candidateDirs
+
+-- Utils
+
+isFile File{} = True
+isFile Directory{} = False
+isDirectory = not . isFile
+
+flatten :: FileObject -> [FileObject]
+flatten fs@(Directory{}) = (fs:(concatMap flatten $ getList fs))
+flatten _ = []
+
+-- Build dirtree
+
+emptyDir n = Directory { getName = n, getList = [], getSize = 0 }
+
+buildTree :: [Instruction] -> FileObject
+buildTree l = buildTree' l (emptyDir "/") [] where
+    buildTree' :: [Instruction] -> FileObject -> [String] -> FileObject
+    buildTree' [] fileSystem _ = fileSystem
+    buildTree' (x:xs) fileSystem pathStack = case (x) of
+        ChangeDir "/"  -> buildTree' xs fileSystem []
+        ChangeDir ".." -> buildTree' xs fileSystem $ drop 1 pathStack
+        ChangeDir name -> buildTree' xs (createDirIfNotExists (reverse (name:pathStack)) fileSystem) (name:pathStack)
+        ListDir files  -> buildTree' xs (addFilesToDir ("/":(reverse pathStack)) files fileSystem) pathStack
+
+createDirIfNotExists :: [String] -> FileObject -> FileObject
+createDirIfNotExists [newDir] d@(Directory { getName = n, getList = l, getSize = s })
+    | not $ ((==) newDir) `any` map (getName) l = Directory { getName = n, getList = ((emptyDir newDir):l), getSize = s }
+    | otherwise = d
+createDirIfNotExists (cwd:path) d@(Directory { getName = n, getList = l, getSize = s })
+    | cwd == n = Directory { getName = n, getList = map (createDirIfNotExists path) l, getSize = s }
+    | otherwise = d
+createDirIfNotExists _ f = f
+
+addFilesToDir :: [String] -> [FileObject] -> FileObject -> FileObject
+addFilesToDir [cwd] files d@(Directory { getName = n, getList = l })
+    | cwd == n = Directory { getName = n, getList = l ++ files, getSize = totalSize (l ++ files) }
+    | otherwise = d
+addFilesToDir (cwd:path) files d@(Directory { getName = n, getList = l })
+    | cwd == n = Directory { getName = n, getList = map (addFilesToDir path files) l, getSize = totalSize $ map (addFilesToDir path files) l }
+    | otherwise = d
+addFilesToDir _ _ f = f
+
+totalSize = sum . map (size) where
+        size File { getSize = s } = s
+        size Directory { getList = l } = sum $ map (size)  l
 
 -- Parsing
 
-parseInput :: Parse [Instruction]
+parseInput :: Parser [Instruction]
+parseInput = do
+    instructions <- manyTill parseCommand eof
+    return instructions
 
-parseCommand :: Parse Instruction
+parseCommand :: Parser Instruction
+parseCommand = try parseChangeDir <|> parseListDir
+
+parseChangeDir :: Parser Instruction
+parseChangeDir = do
+    string "$ cd "
+    dirName <- (string ".." <|> string "/" <|> many1 lower)
+    endOfLine
+    return $ ChangeDir dirName
+
+parseListDir :: Parser Instruction
+parseListDir = do
+    string "$ ls"
+    endOfLine
+    files <- parseFileObjects `sepEndBy1` endOfLine
+    return $ ListDir files
+
+parseFileObjects :: Parser FileObject
+parseFileObjects = try parseDirName <|> parseFileSizeName
+
+parseDirName :: Parser FileObject
+parseDirName = do
+    string "dir "
+    dirName <- many1 lower
+    return Directory { getName = dirName, getList = [], getSize = 0 }
+
+parseFileSizeName :: Parser FileObject
+parseFileSizeName = do
+    size <- read <$> many1 digit
+    spaces
+    fileName <- many1 (lower <|> char '.')
+    return File { getName = fileName, getSize = size }
 
 -- Data types
 
-data Instruction = ChangeDir String | ListDir
+data Instruction = ChangeDir String | ListDir [FileObject] deriving Show
 
 changeDir :: [String] -> String -> [String]
 changeDir _ "/" = []
 changeDir (x:xs) ".." = xs
 changeDir l d = (d:l)
 
-data FileObject = Directory { getName :: String, getContents :: [FileObject] } | File { getName :: String, getSize :: Int } deriving Show
+data FileObject = Directory { getName :: String, getSize :: Int, getList :: [FileObject] } | File { getName :: String, getSize :: Int } deriving (Eq, Show)
 
 -- Input
 
@@ -56,7 +144,8 @@ $ ls
 4060174 j
 8033020 d.log
 5626152 d.ext
-7214296 k|]
+7214296 k
+|]
 
 input = [here|$ cd /
 $ ls
