@@ -113,11 +113,6 @@ parseFileSizeName = do
 
 data Instruction = ChangeDir String | ListDir [FileObject] deriving Show
 
-changeDir :: [String] -> String -> [String]
-changeDir _ "/" = []
-changeDir (x:xs) ".." = xs
-changeDir l d = (d:l)
-
 data FileObject = Directory { getName :: String, getSize :: Int, getList :: [FileObject] } | File { getName :: String, getSize :: Int } deriving (Eq, Show)
 
 -- Input
