@@ -60,27 +60,6 @@ topToEdge (x,y) f = reverse $ take y $ head $ drop x $ transpose f
 
 bottomToEdge (x,y) f = drop (y+1) $ head $ drop x $ transpose f
 
--- Visible trees from edges
-
-allVisibleTreesFromEdges :: [[((Int, Int),Int)]] -> Set.Set (Int, Int)
-allVisibleTreesFromEdges f = Set.unions [visibleTreesFromLeft f, visibleTreesFromRight f, visibleTreesFromTop f, visibleTreesFromBottom f] where
-    visibleTreesFromLeft = visibleTreesFromEdge (id)
-    visibleTreesFromRight = visibleTreesFromEdge (map (reverse))
-    visibleTreesFromTop = visibleTreesFromEdge (transpose)
-    visibleTreesFromBottom = visibleTreesFromEdge (map (reverse) . transpose)
-
-visibleTreesFromEdge :: ([[((Int, Int),Int)]] -> [[((Int, Int),Int)]]) 
-                -> [[((Int, Int),Int)]] 
-                -> Set.Set (Int, Int)
-visibleTreesFromEdge f = Set.fromList . concatMap (visibleLine) . f
-
-visibleLine :: [((Int, Int),Int)] -> [(Int, Int)]
-visibleLine ((p, h):xs) = checkHeight [p] h xs where
-    checkHeight treePositions _ [] = treePositions
-    checkHeight treePositions currentHeight ((nextPosition, nextHeight):line)
-        | currentHeight < nextHeight = checkHeight (nextPosition:treePositions) nextHeight line
-        | otherwise = treePositions
-
 -- Parse
 
 forestMap = runParser parseForest (0::Int,0::Int) "parseForest"
