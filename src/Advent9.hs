@@ -4,6 +4,8 @@ module Advent9
     ) where
 
 import Data.List (nub)
+import Data.Tuple.Extra
+import Data.Ord
 import Text.Heredoc
 import Text.Parsec
 import Text.Parsec.Char
@@ -11,9 +13,34 @@ import Text.Parsec.Combinator (manyTill)
 
 -- Answers
 
-advent9_1 = length . nub . map (snd) . traverseRope . directionsList <$> parse parseInput "" input
+advent9_1 = length 
+          . nub 
+          . map (snd) 
+          . traverseRope 
+          . directionsList 
+          <$> parse parseInput "" input
 
-advent9_2 = traverseRope . directionsList <$> parse parseInput "" input_example
+advent9_2 = {-- length 
+          . nub 
+          . head 
+          . map (reverse) . --}
+          traverseRopeSegments 
+          . directionsList 
+          <$> parse parseInput "" input_example
+
+-- Traverse rope segments
+
+traverseRopeSegments = scanl (moveRopeSegments) startingRopeSegments
+
+startingRopeSegments = take 10 $ repeat (0,0)
+
+moveRopeSegments :: [(Int,Int)] -> Direction -> [(Int,Int)]
+moveRopeSegments (a:b:l) d = let (currentRope, _) = moveRope (a,b) d in
+    (currentRope : applyMoveTail (b:l) currentRope) where
+
+applyMoveTail (a:[]) h = [moveTail h a]
+applyMoveTail (a:l) h = let newTail = moveTail h a in
+    (newTail: applyMoveTail l newTail)
 
 -- Traverse rope
 
@@ -28,23 +55,22 @@ directionsList = concatMap (\(d, n) -> take n $ repeat d)
 -- Rope behaviour
 
 moveRope :: ((Int, Int), (Int, Int)) -> Direction -> ((Int, Int), (Int, Int))
-moveRope ((xHead,yHead), posTail) direction = (newHeadPos, moveTail newHeadPos posTail direction) where
+moveRope ((xHead,yHead), posTail) direction = (newHeadPos, moveTail newHeadPos posTail) where
     newHeadPos = case (direction) of
         U -> (xHead, yHead - 1)
         D -> (xHead, yHead + 1)
         R -> (xHead + 1, yHead)
         L -> (xHead - 1, yHead)
+        N -> (xHead, yHead)
 
-moveTail h@(xHead, yHead) t@(xTail, yTail) d
+moveTail h@(xHead, yHead) t@(xTail, yTail)
     | headTailTogether h t = (xTail, yTail)
-    | distanceX h t < (-1) = (xHead + 1, yHead)
-    | distanceX h t >   1  = (xHead - 1, yHead)
-    | distanceY h t < (-1) = (xHead, yHead + 1)
-    | distanceY h t >   1  = (xHead, yHead - 1)
+    | otherwise = (xHead - xDist, yHead - yDist) where
+        (xDist, yDist) = both (clamp (-1, 1)) $ distance h t
 
-headTailTogether h t = ((abs $ distanceX h t) <= 1) && ((abs $ distanceY h t) <= 1)
-distanceX (xHead, _) (xTail, _) = xHead - xTail
-distanceY (_, yHead) (_, yTail) = yHead - yTail
+headTailTogether h t = ((abs xDist) <= 1) && ((abs yDist) <= 1) where
+    (xDist, yDist) = distance h t
+distance (xh,yh) (xt,yt) = (xh-xt, yh-yt)
 
 -- Parse
 
@@ -56,7 +82,7 @@ parseInstruction = do
     num <- many1 digit
     return (read [instruction] :: Direction, read num :: Int)
 
-data Direction = U | D | L | R deriving (Show, Read, Eq)
+data Direction = U | D | L | R | N deriving (Show, Read, Eq) -- N for no-op
 
 -- Input
 
@@ -68,6 +94,15 @@ R 4
 D 1
 L 5
 R 2|]
+
+input_example2 = [here|R 5
+U 8
+L 8
+D 3
+R 17
+D 10
+L 25
+U 20|]
 
 input = [here|R 2
 D 2

@@ -26,6 +26,7 @@ library
                      , text
                      , containers
                      , time
+                     , extra
                      , array
                      , unordered-containers
                      , parsec
