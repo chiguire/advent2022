@@ -9,7 +9,6 @@ import Data.Ord
 import Text.Heredoc
 import Text.Parsec
 import Text.Parsec.Char
-import Text.Parsec.Combinator (manyTill)
 
 -- Answers
 
