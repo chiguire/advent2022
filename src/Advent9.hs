@@ -31,8 +31,6 @@ advent9_2 = length
 traverseRopeSegments :: [(Int, Int)] -> [Direction] -> [[(Int, Int)]]
 traverseRopeSegments startingRopeSegments d = scanl (moveRopeSegments) startingRopeSegments d
 
-startingRopeSegments startingRopeSegments = take 10 $ repeat (0,0)
-
 startingRope n = take n $ repeat (0,0)
 
 -- List of intructions to directions
