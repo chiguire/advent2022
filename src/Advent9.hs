@@ -15,38 +15,26 @@ import Text.Parsec.Combinator (manyTill)
 
 advent9_1 = length 
           . nub 
-          . map (snd) 
-          . traverseRope 
+          . map (head . reverse) 
+          . (traverseRopeSegments $ startingRope 2)
           . directionsList 
           <$> parse parseInput "" input
 
-advent9_2 = {-- length 
-          . nub 
-          . head 
-          . map (reverse) . --}
-          traverseRopeSegments 
+advent9_2 = length
+          . nub
+          . map (head . reverse)
+          . (traverseRopeSegments $ startingRope 10)
           . directionsList 
-          <$> parse parseInput "" input_example
+          <$> parse parseInput "" input
 
 -- Traverse rope segments
 
-traverseRopeSegments = scanl (moveRopeSegments) startingRopeSegments
+traverseRopeSegments :: [(Int, Int)] -> [Direction] -> [[(Int, Int)]]
+traverseRopeSegments startingRopeSegments d = scanl (moveRopeSegments) startingRopeSegments d
 
-startingRopeSegments = take 10 $ repeat (0,0)
+startingRopeSegments startingRopeSegments = take 10 $ repeat (0,0)
 
-moveRopeSegments :: [(Int,Int)] -> Direction -> [(Int,Int)]
-moveRopeSegments (a:b:l) d = let (currentRope, _) = moveRope (a,b) d in
-    (currentRope : applyMoveTail (b:l) currentRope) where
-
-applyMoveTail (a:[]) h = [moveTail h a]
-applyMoveTail (a:l) h = let newTail = moveTail h a in
-    (newTail: applyMoveTail l newTail)
-
--- Traverse rope
-
-traverseRope = scanl (moveRope) startingRope
-
-startingRope = ((0,0),(0,0))
+startingRope n = take n $ repeat (0,0)
 
 -- List of intructions to directions
 
@@ -54,18 +42,25 @@ directionsList = concatMap (\(d, n) -> take n $ repeat d)
 
 -- Rope behaviour
 
-moveRope :: ((Int, Int), (Int, Int)) -> Direction -> ((Int, Int), (Int, Int))
-moveRope ((xHead,yHead), posTail) direction = (newHeadPos, moveTail newHeadPos posTail) where
-    newHeadPos = case (direction) of
-        U -> (xHead, yHead - 1)
-        D -> (xHead, yHead + 1)
-        R -> (xHead + 1, yHead)
-        L -> (xHead - 1, yHead)
-        N -> (xHead, yHead)
+moveRopeSegments :: [(Int,Int)] -> Direction -> [(Int,Int)]
+moveRopeSegments (a:b:l) d = let currentRope = moveRopeHead a d in
+    (currentRope : applyMoveTail (b:l) currentRope) where
+
+applyMoveTail :: [(Int, Int)] -> (Int, Int) -> [(Int, Int)]
+applyMoveTail [] _ = []
+applyMoveTail (a:l) h = let newTail = moveTail h a in
+    (newTail: applyMoveTail l newTail)
+
+moveRopeHead :: (Int, Int) -> Direction -> (Int, Int)
+moveRopeHead (xHead,yHead) direction = case (direction) of
+    U -> (xHead, yHead - 1)
+    D -> (xHead, yHead + 1)
+    R -> (xHead + 1, yHead)
+    L -> (xHead - 1, yHead)
 
 moveTail h@(xHead, yHead) t@(xTail, yTail)
     | headTailTogether h t = (xTail, yTail)
-    | otherwise = (xHead - xDist, yHead - yDist) where
+    | otherwise = (xTail + xDist, yTail + yDist) where
         (xDist, yDist) = both (clamp (-1, 1)) $ distance h t
 
 headTailTogether h t = ((abs xDist) <= 1) && ((abs yDist) <= 1) where
@@ -82,7 +77,7 @@ parseInstruction = do
     num <- many1 digit
     return (read [instruction] :: Direction, read num :: Int)
 
-data Direction = U | D | L | R | N deriving (Show, Read, Eq) -- N for no-op
+data Direction = U | D | L | R deriving (Show, Read, Eq)
 
 -- Input
 
