@@ -1,7 +1,10 @@
 {-# LANGUAGE TemplateHaskell, QuasiQuotes #-}
 module Advent10
-    ( advent10_1, advent10_2
+    ( advent10_1, advent10_2, valuesList, input_example, input_example2, parseInput, executeInstructions
     ) where
+
+import Data.List.Split (chunksOf)
+import Data.Foldable
 
 import Text.Heredoc
 
@@ -12,9 +15,30 @@ import Text.Parsec.Combinator (manyTill)
 
 -- Answers
 
-advent10_1 = 0
+advent10_1 = sumCycles . executeInstructions
+         <$> parse parseInput "" input
 
-advent10_2 = parse parseInput "" input_example
+advent10_2 = 0
+
+-- Execution
+
+executeInstructions = fst
+                    . foldl' (computerCycle) ([], 1)
+
+startingState = (1,0)
+
+computerCycle :: ([Int], Int) -> Instruction -> ([Int], Int)
+computerCycle (x,c) Noop = (x ++ [c],c)
+computerCycle (x,c) (Addx v) = (x ++ [c,c],c+v)
+
+valuesList :: [(Int, Int)] -> [Int]
+valuesList = concatMap (\(x,c) -> take c $ repeat x)
+
+sumCycles :: [Int] -> Int
+sumCycles cycles = sum $ map (cycleValue cycles) [20, 60, 100, 140, 180, 220]
+
+cycleValue :: [Int] -> Int -> Int
+cycleValue l c = let v = head $ drop (c-1) l in v * c
 
 -- Parsing
 
@@ -38,8 +62,12 @@ parsePositiveAddx = do
     number <- many digit
     return $ Addx $ read number
 
-data Instruction = Noop | Addx Integer deriving (Eq, Show)
+data Instruction = Noop | Addx Int deriving (Eq, Show)
 -- Input
+
+input_example2 = [here|noop
+addx 3
+addx -5|]
 
 input_example = [here|addx 15
 addx -11
