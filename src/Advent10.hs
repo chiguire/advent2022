@@ -18,10 +18,27 @@ import Text.Parsec.Combinator (manyTill)
 advent10_1 = sumCycles . executeInstructions
          <$> parse parseInput "" input
 
-advent10_2 = 0
+advent10_2 = renderScreen . executeInstructions
+         <$> parse parseInput "" input
+
+-- Render
+
+renderScreen :: [Int] -> [String]
+renderScreen = words . concatMap (drawPixel) . zip [1..]
+
+drawPixel :: (Int, Int) -> String
+drawPixel (cycle, x) = isInPixel (cycle, x) : (aNewline cycle) where
+    aNewline c
+        | c `elem` [40, 80, 120, 160, 200, 240] = "\n"
+        | otherwise = ""
+    isInPixel (cycle, x)
+        | abs (cInLine - x - 1) <= 1 = '#'
+        | otherwise = '.' where
+            cInLine = 1 + (cycle-1) `mod` 40
 
 -- Execution
 
+executeInstructions :: [Instruction] -> [Int]
 executeInstructions = fst
                     . foldl' (computerCycle) ([], 1)
 
