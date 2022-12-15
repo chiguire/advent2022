@@ -1,6 +1,6 @@
 {-# LANGUAGE TemplateHaskell, QuasiQuotes #-}
 module Advent10
-    ( advent10_1, advent10_2, valuesList, input_example, input_example2, parseInput, executeInstructions
+    ( advent10_1, advent10_2
     ) where
 
 import Data.List.Split (chunksOf)
@@ -42,14 +42,9 @@ executeInstructions :: [Instruction] -> [Int]
 executeInstructions = fst
                     . foldl' (computerCycle) ([], 1)
 
-startingState = (1,0)
-
 computerCycle :: ([Int], Int) -> Instruction -> ([Int], Int)
 computerCycle (x,c) Noop = (x ++ [c],c)
 computerCycle (x,c) (Addx v) = (x ++ [c,c],c+v)
-
-valuesList :: [(Int, Int)] -> [Int]
-valuesList = concatMap (\(x,c) -> take c $ repeat x)
 
 sumCycles :: [Int] -> Int
 sumCycles cycles = sum $ map (cycleValue cycles) [20, 60, 100, 140, 180, 220]
